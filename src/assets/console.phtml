@@ -1,0 +1,137 @@
+<!doctype>
+<meta charset="utf-8">
+<title>PHP console</title>
+
+<style>
+	<?php require $tracyAssets . '/Toggle/toggle.css' ?>
+	<?php require $tracyAssets . '/Dumper/dumper.css' ?>
+
+	body {
+		margin: 1em;
+	}
+
+	#monitor {
+		font: 12pt/1.5 Consolas, monospace;
+		border-bottom: 1px solid #eee;
+	}
+
+	#monitor pre {
+		padding: 0;
+		border: 0;
+		margin: 1px 0;
+		background: white;
+	}
+
+	#command {
+		width: 100%;
+		height: 150px;
+		border: none;
+		outline: none;
+		font: 12pt/1.5 Consolas, monospace;
+		background: url(data:image/png;base64,R0lGODlhEgAZAPAAAAAAAP///yH/C05FVFNDQVBFMi4wAwEAAAAh+QQEMgD/ACwAAAAAEgAZAAACE4SPqcvtD6OctNqLs968+w+GUwEAIfkEBTIAAAAsAAAAABIAGQAAAhOMj6nL7Q+jnLTai7PevPsPhlMBADs=) no-repeat;
+	}
+
+	#command:focus {
+		background: none;
+	}
+</style>
+<script src="//code.jquery.com/jquery-1.10.1.min.js"></script>
+
+<body>
+	<div id="monitor"></div>
+	<textarea id="command"></textarea>
+
+	<script>
+	<?php require $tracyAssets . '/Toggle/toggle.js' ?>
+	<?php require $tracyAssets . '/Dumper/dumper.js' ?>
+
+	Tracy.Dumper.init();
+
+	var Console = function(addr) {
+		this.$command = $('#command');
+		this.$monitor = $('#monitor');
+		try {
+			this.connect(addr);
+		} catch (e) {
+			this.write(e.message);
+			return;
+		}
+
+		this.$command.keydown($.proxy(this.keyHandler, this));
+		$('body').keydown($.proxy(function() {
+			this.$command.focus();
+		}, this));
+	};
+
+	Console.prototype = {
+		ws: null,
+		history: [],
+		historyPos: 0,
+		$command: null,
+		$monitor: null,
+
+		read: function() {
+			var val = this.$command.val();
+			this.$command.val('');
+			this.history.push(val);
+			this.historyPos = this.history.length;
+			return val;
+		},
+
+		write: function(html) {
+			this.$monitor.append(html);
+			$('body').scrollTop( $('body').prop('scrollHeight') );
+		},
+
+		connect: function(addr) {
+			this.ws = new WebSocket('ws://' + addr);
+			me = this;
+			this.ws.onerror = function(e) {
+				console.log('Error', e);
+			};
+			this.ws.onmessage = function(e) {
+				me.write($.parseHTML(e.data));
+			};
+			this.ws.onclose = function(e) {
+				me.write('<i>PHP is dead, Dave. Refresh this page.</i>');
+			};
+		},
+
+		keyHandler: function(e) {
+			if (e.shiftKey || e.ctrlKey || e.altKey || e.metaKey) {
+				return;
+			}
+			if (e.which === 13) { // enter
+				var cmd = this.read();
+				this.write($('<pre>').text(cmd));
+				this.ws.send(cmd);
+				return false;
+
+			} else if (e.which === 9) { // tab
+				return false;
+
+			} else if (e.which === 38) { // up
+				if (this.historyPos && this.history.length) {
+					this.$command.val( this.history[--this.historyPos] );
+				}
+				return false;
+
+			} else if (e.which === 40) { // down
+				if (this.historyPos < this.history.length - 1) {
+					this.$command.val( this.history[++this.historyPos] );
+				}
+				return false;
+			}
+		}
+	};
+
+
+	if ('WebSocket' in window) {
+		var con = new Console(<?php echo json_encode($addr) ?>);
+	} else {
+		$('body').text("Sorry, your browser doesn't support WebSocket.");
+	}
+	</script>
+
+</body>
+</html>

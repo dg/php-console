@@ -1,0 +1,21 @@
+{
+	"name": "dg/php-console",
+	"description": "PHP Console",
+	"license": ["BSD-3-Clause", "GPL-2.0", "GPL-3.0"],
+	"authors": [
+		{
+			"name": "David Grudl",
+			"homepage": "https://davidgrudl.com"
+		}
+	],
+	"require": {
+		"php": ">=5.4.4"
+	},
+	"require-dev": {
+		"tracy/tracy": "^2.4"
+	},
+	"minimum-stability": "dev",
+	"autoload": {
+		"classmap": ["src/"]
+	}
+}
